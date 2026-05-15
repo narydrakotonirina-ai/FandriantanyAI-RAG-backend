@@ -81,7 +81,7 @@ Question: {question}
 
     try:
         res = groq_client.chat.completions.create(
-            model="qwen-3-32b",
+            model="qwen/qwen-3-32b",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=200,
             temperature=0
@@ -151,7 +151,7 @@ Question :
     for attempt in range(3):
         try:
             res = groq_client.chat.completions.create(
-                model="qwen-3-32b",
+                model="qwen/qwen-3-32b",
                 messages=[
                     {"role": "system", "content": "Réponse juridique claire"},
                     {"role": "user", "content": prompt}
