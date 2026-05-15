@@ -1,11 +1,12 @@
 import os
+import json
 import asyncio
 import hashlib
 from fastapi import FastAPI
 from pydantic import BaseModel
 from supabase import create_client
 from cachetools import TTLCache
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 from groq import Groq
 
 # ==============================
@@ -21,9 +22,11 @@ sb = create_client(SUPABASE_URL, SUPABASE_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY)
 
 # Embedding model (CPU)
-model = SentenceTransformer(
-    "paraphrase-multilingual-mpnet-base-v2"
-)
+model = TextEmbedding()
+
+def embed(text):
+    return list(model.embed([text]))[0].tolist()
+
 
 # Cache (1h)
 cache = TTLCache(maxsize=1000, ttl=3600)
@@ -86,7 +89,12 @@ Question: {question}
 
         content = res.choices[0].message.content.strip()
 
-        return eval(content)
+
+        # ✅ parsing sécurisé
+        data = json.loads(content)
+
+        return data
+
 
     except Exception as e:
         print(f"❌ triage error: {e}")
@@ -103,7 +111,7 @@ Question: {question}
 
 async def hybrid_search(query: str, top_k=5):
 
-    embedding = model.encode([query])[0].tolist()
+    embedding = embed(query)  # ✅ appel simple
 
     try:
         res = sb.rpc("match_chunks", {
