@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 supabase
-sentence-transformers
+fastembed
 groq
 cachetools
 numpy
