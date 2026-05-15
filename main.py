@@ -83,8 +83,8 @@ Question: {question}
         res = groq_client.chat.completions.create(
             model="qwen/qwen3-32b",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
-            temperature=0
+            max_tokens=800,
+            temperature=0.1
         )
 
         content = res.choices[0].message.content.strip()
@@ -132,20 +132,28 @@ async def hybrid_search(query: str, top_k=5):
 
 async def safe_generate(question, context, type_probleme):
 
-    prompt = f"""
-Tu es un expert du droit foncier malgache.
+    prompt =f"""
+Tu es un expert en droit foncier malgache. Tu réponds toujours en français correct, clair et professionnel.
+N'utilise jamais l'anglais. Ne montre jamais ton raisonnement interne.
 
-Réponds STRICTEMENT avec :
+Réponds **strictement** avec ce format :
 
-Situation :
-Risques :
-Démarches :
+**Situation :**  
+[Explication claire et précise]
+
+**Risques :**  
+[Les points d'attention ou risques éventuels]
+
+**Démarches :**  
+[Étapes concrètes à suivre]
 
 Contexte :
 {context}
 
 Question :
 {question}
+
+Réponds uniquement en français, sans aucun mot en anglais, sans <think>, sans explication supplémentaire.
 """
 
     for attempt in range(3):
