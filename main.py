@@ -81,7 +81,7 @@ Question: {question}
 
     try:
         res = groq_client.chat.completions.create(
-            model="qwen/qwen-3-32b",
+            model="qwen/qwen3-32b",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=200,
             temperature=0
@@ -151,7 +151,7 @@ Question :
     for attempt in range(3):
         try:
             res = groq_client.chat.completions.create(
-                model="qwen/qwen-3-32b",
+                model="qwen/qwen3-32b",
                 messages=[
                     {"role": "system", "content": "Réponse juridique claire"},
                     {"role": "user", "content": prompt}
@@ -237,3 +237,14 @@ async def ask(q: QuestionRequest):
     except Exception as e:
         print(f"❌ /ask error: {e}")
         return {"error": "generation_failed"}
+
+#=========================
+#DEBUG
+#=========================
+@app.get("/models")
+async def list_models():
+    try:
+        models = groq_client.models.list()
+        return [m.id for m in models.data]
+    except Exception as e:
+        return {"error": str(e)}
