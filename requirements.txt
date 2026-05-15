@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+supabase
+sentence-transformers
+groq
+cachetools
+numpy
