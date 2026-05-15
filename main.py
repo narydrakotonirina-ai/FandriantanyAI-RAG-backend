@@ -83,8 +83,8 @@ Question: {question}
         res = groq_client.chat.completions.create(
             model="qwen/qwen3-32b",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=800,
-            temperature=0.1
+            max_tokens=200,
+            temperature=0
         )
 
         content = res.choices[0].message.content.strip()
