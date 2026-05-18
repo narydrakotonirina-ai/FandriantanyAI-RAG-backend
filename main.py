@@ -159,14 +159,43 @@ async def hybrid_search(query: str, top_k=5):
 # GENERATION GROQ (ROBUSTE)
 # ==============================
 
+import re
+import asyncio
+
+# ==========================
+# ✅ FILTRE ROBUSTE
+# ==========================
+def filtrer_think(text: str) -> str:
+    if not text:
+        return ""
+
+    # ✅ supprimer balises think (même mal fermées)
+    text = text.replace("<think>", "").replace("</think>", "")
+
+    # ✅ couper tout avant "Situation"
+    match = re.search(r"(Situation\s*:.*)", text, flags=re.DOTALL | re.IGNORECASE)
+
+    if match:
+        return match.group(1).strip()
+
+    return text.strip()
+
+
+# ==========================
+# ✅ SAFE GENERATE OPTIMISÉ
+# ==========================
 async def safe_generate(question, context, type_probleme):
+
+    # ✅ LIMITER LE CONTEXTE (évite troncature)
+    MAX_CHARS = 1500
+    context = context[:MAX_CHARS]
 
     prompt = f"""
 Tu es un expert en droit foncier malgache.
 
-Réponds en français clair, simple et professionnel.
+Réponds en français clair et professionnel.
 
-Structure ta réponse comme ceci :
+Structure ta réponse comme suit :
 
 Situation :
 Décris la situation juridique.
@@ -178,10 +207,10 @@ Démarches :
 Propose des actions concrètes.
 
 IMPORTANT :
-- Réponds en français uniquement
-- Ne réponds PAS en anglais
-- Ne montre pas de raisonnement interne
-- Utilise uniquement le contexte fourni
+- Réponds uniquement en français
+- Donne directement la réponse finale
+- N'affiche pas de raisonnement interne
+- Réponse concise (10 à 15 lignes)
 
 Contexte :
 {context}
@@ -198,7 +227,7 @@ Question :
                     {"role": "system", "content": "Assistant juridique spécialisé foncier"},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=1000,
+                max_tokens=1000,  # ✅ AUGMENTÉ
                 temperature=0.2,
             )
 
@@ -207,20 +236,20 @@ Question :
             if text:
                 cleaned = filtrer_think(text)
 
-                # ✅ IMPORTANT : ne pas bloquer la réponse
+                # ✅ ne plus bloquer
                 return cleaned
 
         except Exception as e:
             print(f"⚠️ generate attempt {attempt+1}: {e}")
             await asyncio.sleep(1)
 
-    # ✅ fallback UX propre (pas d'erreur technique)
+    # ✅ fallback UX propre
     return """**Contexte juridique :**
-
+            
             Les textes juridiques pertinents ont été identifiés ci-dessous.
             
-            La génération automatique de réponse n’a pas pu être finalisée pour cette question. 
-            Vous pouvez vous référer aux sources juridiques affichées pour identifier les règles applicables.
+            Vous pouvez consulter les articles affichés pour comprendre les règles applicables à votre situation.
+            
             """
 
 
