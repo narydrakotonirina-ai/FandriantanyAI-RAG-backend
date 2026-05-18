@@ -261,3 +261,62 @@ async def list_models():
         return [m.id for m in models.data]
     except Exception as e:
         return {"error": str(e)}
+
+# ==============================
+#STATS
+# ==============================
+@app.get("/stats")
+def stats():
+    total_textes = supabase.table("chunks").select("loi", count="exact").execute()
+    total_articles = supabase.table("chunks").select("id", count="exact").execute()
+
+    categories = supabase.table("chunks").select("categorie").execute()
+
+    unique_categories = list(set([c["categorie"] for c in categories.data]))
+
+    return {
+        "textes": len(set([c["loi"] for c in categories.data])),
+        "articles": total_articles.count,
+        "categories": len(unique_categories),
+        "questions": 0
+    }
+
+# ==============================
+#CATEGORIES
+# ==============================
+@app.get("/categories")
+def categories():
+    data = supabase.table("chunks").select("categorie", "loi").execute()
+
+    result = {}
+
+    for row in data.data:
+        cat = row["categorie"]
+
+        if cat not in result:
+            result[cat] = set()
+
+        result[cat].add(row["loi"])
+
+    return [
+        {
+            "categorie": k,
+            "count": len(v)
+        }
+        for k, v in result.items()
+    ]
+
+# ==============================
+#TEXTES  
+# ==============================
+@app.get("/textes")
+def textes(categorie: str = None):
+    query = supabase.table("chunks").select("loi", "article", "texte", "priorite")
+
+    if categorie:
+        query = query.eq("categorie", categorie)
+
+    data = query.execute()
+
+    return data.data
+
