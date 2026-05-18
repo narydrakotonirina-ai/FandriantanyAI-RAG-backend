@@ -267,17 +267,19 @@ async def list_models():
 # ==============================
 @app.get("/stats")
 def stats():
-    total_textes = sb.table("chunks").select("loi", count="exact").execute()
-    total_articles = sb.table("chunks").select("id", count="exact").execute()
+    data = sb.table("chunks").select("loi", "categorie", "id").execute()
 
-    categories = sb.table("chunks").select("categorie").execute()
+    rows = data.data or []
 
-    unique_categories = list(set([c["categorie"] for c in categories.data]))
+    # ✅ sécurisation
+    textes = len(set([r["loi"] for r in rows if r.get("loi")]))
+    categories = len(set([r["categorie"] for r in rows if r.get("categorie")]))
+    articles = len(rows)
 
     return {
-        "textes": len(set([c["loi"] for c in categories.data])),
-        "articles": total_articles.count,
-        "categories": len(unique_categories),
+        "textes": textes,
+        "articles": articles,
+        "categories": categories,
         "questions": 0
     }
 
