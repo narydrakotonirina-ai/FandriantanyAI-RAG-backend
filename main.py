@@ -2,6 +2,7 @@ import os
 import json
 import asyncio
 import hashlib
+import re
 from fastapi import FastAPI
 from pydantic import BaseModel
 from supabase import create_client
@@ -60,6 +61,9 @@ def build_context(chunks, max_chars=4000):
 
     return context
 
+def filtrer_think(texte: str) -> str:
+    """Supprime les blocs <think>...</think> générés par Qwen3."""
+    return re.sub(r'<think>.*?</think>', '', texte, flags=re.DOTALL).strip()
 
 # ==============================
 # TRIAGE GROQ
@@ -171,7 +175,7 @@ Réponds uniquement en français, sans aucun mot en anglais, sans <think>, sans 
             text = res.choices[0].message.content
 
             if text:
-                return text
+                return filtrer_think(text)
 
         except Exception as e:
             print(f"⚠️ generate attempt {attempt+1}: {e}")
