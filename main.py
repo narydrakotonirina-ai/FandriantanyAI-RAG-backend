@@ -70,9 +70,20 @@ def build_context(chunks, max_chars=4000):
 
     return context
 
-def filtrer_think(texte: str) -> str:
-    """Supprime les blocs <think>...</think> générés par Qwen3."""
-    return re.sub(r'<think>.*?</think>', '', texte, flags=re.DOTALL).strip()
+
+def filtrer_think(text: str) -> str:
+    if not text:
+        return ""
+
+    # ❌ supprimer bloc <think>...</think>
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+
+    # ❌ supprimer lignes anglaises fréquentes
+    text = re.sub(r"(?i)okay,.*", "", text)
+    
+    # ❌ supprimer début parasité
+    text = re.sub(r"(?i)^.*?(\*\*Situation)", r"\1", text, flags=re.DOTALL)
+
 
 # ==============================
 # TRIAGE GROQ
@@ -146,28 +157,32 @@ async def hybrid_search(query: str, top_k=5):
 
 async def safe_generate(question, context, type_probleme):
 
-    prompt =f"""
-Tu es un expert en droit foncier malgache. Tu réponds toujours en français correct, clair et professionnel.
-N'utilise jamais l'anglais. Ne montre jamais ton raisonnement interne.
+    prompt = f"""
+Tu es un expert en droit foncier malgache.
 
-Réponds **strictement** avec ce format :
+Réponds UNIQUEMENT en français clair et professionnel.
+
+N'utilise JAMAIS :
+- anglais
+- <think>
+- raisonnement interne
+
+Format obligatoire :
 
 **Situation :**  
-[Explication claire et précise]
+...
 
 **Risques :**  
-[Les points d'attention ou risques éventuels]
+...
 
 **Démarches :**  
-[Étapes concrètes à suivre]
+...
 
 Contexte :
 {context}
 
 Question :
 {question}
-
-Réponds uniquement en français, sans aucun mot en anglais, sans <think>, sans explication supplémentaire.
 """
 
     for attempt in range(3):
@@ -175,7 +190,7 @@ Réponds uniquement en français, sans aucun mot en anglais, sans <think>, sans 
             res = groq_client.chat.completions.create(
                 model="qwen/qwen3-32b",
                 messages=[
-                    {"role": "system", "content": "Réponse juridique claire"},
+                    {"role": "system", "content": "Expert juridique malgache"},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=500,
@@ -185,13 +200,17 @@ Réponds uniquement en français, sans aucun mot en anglais, sans <think>, sans 
             text = res.choices[0].message.content
 
             if text:
-                return filtrer_think(text)
+                cleaned = filtrer_think(text)
+
+                if "Situation" in cleaned:
+                    return cleaned
 
         except Exception as e:
             print(f"⚠️ generate attempt {attempt+1}: {e}")
             await asyncio.sleep(1)
 
     return "❌ Erreur génération Groq"
+
 
 
 # ==============================
