@@ -9,6 +9,7 @@ from supabase import create_client
 from cachetools import TTLCache
 from fastembed import TextEmbedding
 from groq import Groq
+from fastapi.middleware.cors import CORSMiddleware
 
 # ==============================
 # CONFIG
@@ -33,6 +34,14 @@ def embed(text):
 cache = TTLCache(maxsize=1000, ttl=3600)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # autorise tout (dev)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ==============================
 # SCHEMA
