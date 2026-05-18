@@ -75,14 +75,18 @@ def filtrer_think(text: str) -> str:
     if not text:
         return ""
 
-    # ❌ supprimer bloc <think>...</think>
+    # ✅ supprimer bloc <think>
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
 
-    # ❌ supprimer lignes anglaises fréquentes
-    text = re.sub(r"(?i)okay,.*", "", text)
-    
-    # ❌ supprimer début parasité
-    text = re.sub(r"(?i)^.*?(\*\*Situation)", r"\1", text, flags=re.DOTALL)
+    # ✅ essayer de garder à partir de "Situation"
+    match = re.search(r"(Situation\s*:.*)", text, flags=re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+
+    # ✅ sinon retourner tel quel (important !)
+    return text.strip()
+
+
 
 
 # ==============================
@@ -160,23 +164,23 @@ async def safe_generate(question, context, type_probleme):
     prompt = f"""
 Tu es un expert en droit foncier malgache.
 
-Réponds UNIQUEMENT en français clair et professionnel.
+Réponds en français clair, simple et professionnel.
 
-N'utilise JAMAIS :
-- anglais
-- <think>
-- raisonnement interne
+Structure ta réponse comme ceci :
 
-Format obligatoire :
+Situation :
+Décris la situation juridique.
 
-**Situation :**  
-...
+Risques :
+Explique les risques ou points d’attention.
 
-**Risques :**  
-...
+Démarches :
+Propose des actions concrètes.
 
-**Démarches :**  
-...
+IMPORTANT :
+- Réponds en français uniquement
+- Ne montre pas de raisonnement interne
+- Utilise uniquement le contexte fourni
 
 Contexte :
 {context}
@@ -190,7 +194,7 @@ Question :
             res = groq_client.chat.completions.create(
                 model="qwen/qwen3-32b",
                 messages=[
-                    {"role": "system", "content": "Expert juridique malgache"},
+                    {"role": "system", "content": "Assistant juridique spécialisé foncier"},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=500,
@@ -202,14 +206,22 @@ Question :
             if text:
                 cleaned = filtrer_think(text)
 
-                if "Situation" in cleaned:
-                    return cleaned
+                # ✅ IMPORTANT : ne pas bloquer la réponse
+                return cleaned
 
         except Exception as e:
             print(f"⚠️ generate attempt {attempt+1}: {e}")
             await asyncio.sleep(1)
 
-    return "❌ Erreur génération Groq"
+    # ✅ fallback UX propre (pas d'erreur technique)
+    return """**Contexte juridique :**
+
+Les textes juridiques pertinents ont été identifiés ci-dessous.
+
+La génération automatique de réponse n’a pas pu être finalisée pour cette question. 
+Vous pouvez vous référer aux sources juridiques affichées pour identifier les règles applicables.
+"""
+
 
 
 
