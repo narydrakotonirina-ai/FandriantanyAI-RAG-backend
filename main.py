@@ -267,10 +267,10 @@ async def list_models():
 # ==============================
 @app.get("/stats")
 def stats():
-    total_textes = supabase.table("chunks").select("loi", count="exact").execute()
-    total_articles = supabase.table("chunks").select("id", count="exact").execute()
+    total_textes = sb.table("chunks").select("loi", count="exact").execute()
+    total_articles = sb.table("chunks").select("id", count="exact").execute()
 
-    categories = supabase.table("chunks").select("categorie").execute()
+    categories = sb.table("chunks").select("categorie").execute()
 
     unique_categories = list(set([c["categorie"] for c in categories.data]))
 
@@ -286,7 +286,7 @@ def stats():
 # ==============================
 @app.get("/categories")
 def categories():
-    data = supabase.table("chunks").select("categorie", "loi").execute()
+    data = sb.table("chunks").select("categorie", "loi").execute()
 
     result = {}
 
@@ -311,7 +311,7 @@ def categories():
 # ==============================
 @app.get("/textes")
 def textes(categorie: str = None):
-    query = supabase.table("chunks").select("loi", "article", "texte", "priorite")
+    query = sb.table("chunks").select("loi", "article", "texte", "priorite")
 
     if categorie:
         query = query.eq("categorie", categorie)
