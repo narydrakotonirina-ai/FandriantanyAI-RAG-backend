@@ -179,6 +179,7 @@ Propose des actions concrètes.
 
 IMPORTANT :
 - Réponds en français uniquement
+- Ne réponds PAS en anglais
 - Ne montre pas de raisonnement interne
 - Utilise uniquement le contexte fourni
 
@@ -197,7 +198,7 @@ Question :
                     {"role": "system", "content": "Assistant juridique spécialisé foncier"},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=500,
+                max_tokens=1000,
                 temperature=0.2,
             )
 
@@ -216,11 +217,11 @@ Question :
     # ✅ fallback UX propre (pas d'erreur technique)
     return """**Contexte juridique :**
 
-Les textes juridiques pertinents ont été identifiés ci-dessous.
-
-La génération automatique de réponse n’a pas pu être finalisée pour cette question. 
-Vous pouvez vous référer aux sources juridiques affichées pour identifier les règles applicables.
-"""
+            Les textes juridiques pertinents ont été identifiés ci-dessous.
+            
+            La génération automatique de réponse n’a pas pu être finalisée pour cette question. 
+            Vous pouvez vous référer aux sources juridiques affichées pour identifier les règles applicables.
+            """
 
 
 
