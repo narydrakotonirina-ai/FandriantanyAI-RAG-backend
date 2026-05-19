@@ -137,7 +137,7 @@ Question: {question}
 # SEARCH (VECTOR)
 # ==============================
 
-async def hybrid_search(query: str, top_k=5):
+async def hybrid_search(query: str, top_k=3):
 
     embedding = embed(query)  # ✅ appel simple
 
