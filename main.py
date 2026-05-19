@@ -37,7 +37,14 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # autorise tout (dev)
+    allow_origins=
+    [
+        "http://localhost:3000",
+        "https://foncier-ai.vercel.app",
+    ],
+    
+ # ✅ accepte toutes les URLs Vercel (preview inclus)
+    allow_origin_regex=r"https://.*\.vercel\.app"
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
