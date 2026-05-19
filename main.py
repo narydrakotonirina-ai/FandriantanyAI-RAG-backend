@@ -137,7 +137,7 @@ Question: {question}
 # SEARCH (VECTOR)
 # ==============================
 
-async def hybrid_search(query: str, top_k=3):
+async def hybrid_search(query: str, top_k=5):
 
     embedding = embed(query)  # ✅ appel simple
 
@@ -279,10 +279,15 @@ async def ask(q: QuestionRequest):
     qid = hash_question(q.question)
 
     try:
-        # ✅ incrément compteur IA (même si cache)
-        sb.table("stats").update({
-            "ia_requests": sb.raw("ia_requests + 1")
-        }).eq("id", 1).execute()
+        # ✅ INCREMENT IA REQUEST (CORRIGÉ)
+        res = sb.table("stats").select("ia_requests").eq("id", 1).execute()
+
+        if res.data and len(res.data) > 0:
+            current = res.data[0]["ia_requests"]
+
+            sb.table("stats").update({
+                "ia_requests": current + 1
+            }).eq("id", 1).execute()
 
         # ✅ CACHE
         if qid in cache:
@@ -292,44 +297,58 @@ async def ask(q: QuestionRequest):
         triage = await groq_triage(q.question)
 
         if triage["hors_perimetre"]:
-            return {"error": "hors_perimetre"}
+            return {
+                "answer": "Cette question est hors du domaine du droit foncier.",
+                "sources": []
+            }
 
         # ✅ SEARCH
         chunks = await hybrid_search(
             triage["requete_enrichie"],
-            top_k=5
+            top_k=3  # ✅ réduit pour vitesse
         )
 
-        if not chunks or len(chunks) == 0 or chunks[0].get("score", 0) < 0.15:
-            return {"error": "non_trouve"}
-
-        # print(f"✅ chunks: {len(chunks)}")
-        # print(f"✅ top score: {chunks[0].get('score', 0)}")
+        if not chunks or len(chunks) == 0:
+            return {
+                "answer": "Aucun texte pertinent trouvé.",
+                "sources": []
+            }
 
         # ✅ CONTEXT
         context = build_context(chunks)
 
-        # ✅ GENERATION
-        answer = await safe_generate(
-            q.question,
-            context,
-            triage["type_probleme"]
-        )
+        # ✅ GENERATION (IA)
+        try:
+            answer = await safe_generate(
+                q.question,
+                context,
+                triage["type_probleme"]
+            )
+        except Exception as e:
+            print("⚠️ generation fallback:", e)
+
+            # ✅ FALLBACK IMPORTANT
+            answer = """Voici les textes juridiques pertinents correspondant à votre question.
+Veuillez consulter les sources ci-dessous pour obtenir les informations détaillées."""
 
         result = {
             "answer": answer,
             "sources": chunks
         }
 
-        # ✅ CACHE STORE
+        # ✅ CACHE
         cache[qid] = result
 
         return result
 
     except Exception as e:
-        print(f"❌ /ask error: {e}")
-        return {"error": "generation_failed"}
+        print(f"❌ /ask error:", e)
 
+        # ✅ FALLBACK GLOBAL
+        return {
+            "answer": "Une erreur est survenue lors du traitement. Veuillez réessayer.",
+            "sources": []
+        }
 
 #=========================
 #DEBUG
