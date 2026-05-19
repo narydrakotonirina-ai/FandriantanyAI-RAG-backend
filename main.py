@@ -410,11 +410,21 @@ def textes(categorie: str = None):
 # ==============================
 @app.post("/visit")
 def visit():
-    sb.table("stats").update({
-        "visits": sb.raw("visits + 1")
-    }).eq("id", 1).execute()
+    try:
+        # ✅ récupérer valeur actuelle
+        res = sb.table("stats").select("visits").eq("id", 1).execute()
+        current = res.data[0]["visits"]
 
-    return {"status": "ok"}
+        # ✅ incrémenter
+        sb.table("stats").update({
+            "visits": current + 1
+        }).eq("id", 1).execute()
+
+        return {"status": "ok"}
+
+    except Exception as e:
+        print("❌ visit error:", e)
+        return {"error": "visit_failed"}
 
 
 # ==============================
