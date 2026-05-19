@@ -354,16 +354,24 @@ def stats():
     categories = len(set([r["categorie"] for r in rows if r.get("categorie")]))
     articles = len(rows)
 
-    # ✅ récupérer stats dynamiques
-    stats_row = sb.table("stats").select("*").eq("id", 1).execute().data[0]
+    # ✅ FIX CRASH
+    res = sb.table("stats").select("*").eq("id", 1).execute()
+    data_stats = res.data
+
+    if not data_stats:
+        stats_row = {
+            "ia_requests": 0,
+            "visits": 0
+        }
+    else:
+        stats_row = data_stats[0]
 
     return {
         "textes": textes,
         "articles": articles,
         "categories": categories,
         "ia_requests": stats_row["ia_requests"],
-        "visits": stats_row["visits"],
-        "questions": 0
+        "visits": stats_row["visits"]
     }
 
 # ==============================
