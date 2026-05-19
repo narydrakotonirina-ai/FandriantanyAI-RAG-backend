@@ -278,11 +278,16 @@ async def ask(q: QuestionRequest):
 
     qid = hash_question(q.question)
 
-    # ✅ CACHE
-    if qid in cache:
-        return cache[qid]
-
     try:
+        # ✅ incrément compteur IA (même si cache)
+        sb.table("stats").update({
+            "ia_requests": sb.raw("ia_requests + 1")
+        }).eq("id", 1).execute()
+
+        # ✅ CACHE
+        if qid in cache:
+            return cache[qid]
+
         # ✅ TRIAGE
         triage = await groq_triage(q.question)
 
@@ -295,8 +300,11 @@ async def ask(q: QuestionRequest):
             top_k=5
         )
 
-        if not chunks or chunks[0].get("score", 0) < 0.15:
+        if not chunks or len(chunks) == 0 or chunks[0].get("score", 0) < 0.15:
             return {"error": "non_trouve"}
+
+        # print(f"✅ chunks: {len(chunks)}")
+        # print(f"✅ top score: {chunks[0].get('score', 0)}")
 
         # ✅ CONTEXT
         context = build_context(chunks)
@@ -313,6 +321,7 @@ async def ask(q: QuestionRequest):
             "sources": chunks
         }
 
+        # ✅ CACHE STORE
         cache[qid] = result
 
         return result
@@ -320,6 +329,7 @@ async def ask(q: QuestionRequest):
     except Exception as e:
         print(f"❌ /ask error: {e}")
         return {"error": "generation_failed"}
+
 
 #=========================
 #DEBUG
@@ -337,19 +347,22 @@ async def list_models():
 # ==============================
 @app.get("/stats")
 def stats():
-    data = sb.table("chunks").select("loi", "categorie", "id").execute()
-
+    data = sb.table("chunks").select("loi", "categorie").execute()
     rows = data.data or []
 
-    # ✅ sécurisation
     textes = len(set([r["loi"] for r in rows if r.get("loi")]))
     categories = len(set([r["categorie"] for r in rows if r.get("categorie")]))
     articles = len(rows)
+
+    # ✅ récupérer stats dynamiques
+    stats_row = sb.table("stats").select("*").eq("id", 1).execute().data[0]
 
     return {
         "textes": textes,
         "articles": articles,
         "categories": categories,
+        "ia_requests": stats_row["ia_requests"],
+        "visits": stats_row["visits"],
         "questions": 0
     }
 
@@ -392,3 +405,50 @@ def textes(categorie: str = None):
 
     return data.data
 
+# ==============================
+#VISITES  
+# ==============================
+@app.post("/visit")
+def visit():
+    sb.table("stats").update({
+        "visits": sb.raw("visits + 1")
+    }).eq("id", 1).execute()
+
+    return {"status": "ok"}
+
+
+# ==============================
+#TRACKS
+# ==============================
+@app.post("/track")
+def track(data: dict):
+    sb.table("page_views").insert({
+        "type": data.get("type"),
+        "name": data.get("name")
+    }).execute()
+
+    return {"ok": True}
+
+# ==============================
+#STATS-DETAIL
+# ==============================
+@app.get("/stats-detail")
+def stats_detail():
+
+    views = sb.table("page_views").select("type,name").execute().data
+
+    from collections import Counter
+
+    lois = Counter()
+    categories = Counter()
+
+    for v in views:
+        if v["type"] == "loi":
+            lois[v["name"]] += 1
+        elif v["type"] == "categorie":
+            categories[v["name"]] += 1
+
+    return {
+        "top_lois": lois.most_common(5),
+        "top_categories": categories.most_common(5)
+    }
